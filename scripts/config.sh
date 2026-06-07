@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2034
 
 TAG=infra-lab
 HOST_PORT=5000
