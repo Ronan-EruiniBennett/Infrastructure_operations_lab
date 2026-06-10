@@ -11,6 +11,69 @@ Instead of focusing only on application code, the project explores how an app is
 
 ## Architecture
 
+**System Traffic Flow Chart**
+```mermaid
+flowchart TD
+    %% Infrastructure Operations Lab - Traffic Flow
+
+    Client["Client<br/>Browser or curl"] -->|"HTTP request<br/>VM_IP:80"| VMNetwork["Linux VM network interface"]
+
+    VMNetwork -->|"Port 80"| Nginx["Nginx<br/>Reverse proxy"]
+
+    Nginx -->|"proxy_pass<br/>http://127.0.0.1:5000"| HostLoopback["Host loopback interface<br/>127.0.0.1:5000"]
+
+    HostLoopback -->|"Docker port mapping<br/>127.0.0.1:5000 → container:5000"| DockerBridge["Docker networking<br/>bridge / NAT"]
+
+    DockerBridge --> Gunicorn["Gunicorn<br/>WSGI server"]
+
+    Gunicorn --> Flask["Flask application"]
+
+    Flask --> Endpoints["Application endpoints<br/>/, /health, /version, /metrics"]
+
+    Endpoints -->|"HTTP response"| Flask
+    Flask --> Gunicorn
+    Gunicorn --> DockerBridge
+    DockerBridge --> HostLoopback
+    HostLoopback --> Nginx
+    Nginx --> VMNetwork
+    VMNetwork --> Client
+```
+
+**CI Flow Chart**
+```mermaid id="g3v7pc"
+flowchart TD
+    %% GitHub Actions CI Flow
+
+    Trigger["Push to main<br/>or Pull Request to main"] --> Runner["GitHub Actions Runner<br/>ubuntu-latest"]
+
+    Runner --> Checkout["Checkout repository"]
+
+    Checkout --> BashSyntax["Validate Bash syntax<br/>bash -n scripts/*.sh"]
+
+    BashSyntax --> ShellCheck["Lint Bash scripts<br/>shellcheck scripts/*.sh"]
+
+    ShellCheck --> DockerBuild["Build Docker image<br/>docker build -t infra-lab ."]
+
+    DockerBuild --> RunContainer["Run container<br/>docker run --name flask-app -p 5000:5000 infra-lab"]
+
+    RunContainer --> HealthCheck["Check application health<br/>curl http://localhost:5000/health"]
+
+    HealthCheck --> CleanupStop["Stop container<br/>docker stop flask-app"]
+
+    CleanupStop --> CleanupRemove["Remove container<br/>docker rm flask-app"]
+
+    CleanupRemove --> Result{"CI result"}
+
+    Result -->|All checks pass| Pass["Workflow passes"]
+    Result -->|Any check fails| Fail["Workflow fails"]
+
+    BashSyntax -.->|syntax error| Fail
+    ShellCheck -.->|lint issue| Fail
+    DockerBuild -.->|image build error| Fail
+    RunContainer -.->|container start error| Fail
+    HealthCheck -.->|health check fails| Fail
+```
+
 ### Tech Stack
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
@@ -38,7 +101,7 @@ Instead of focusing only on application code, the project explores how an app is
 
 ## Challenges
 
-### Diagnosing Docker Container Networking After VM Resume
+##### Diagnosing Docker Container Networking After VM Resume
 
 **Symptom:** Pip install failure for `requirements.txt` on Docker image build as docker couldn't resolve or reach external package repositories
 
@@ -58,7 +121,7 @@ Suspending the VM and resuming it without completely powering it off likely caus
 
 Restarted the Docker service to restore connectivity to containers, and going forward I’ll fully power off the VM instead of relying on suspend/resume when Docker networking is active.
 
-### Validating Nginx Reverse Proxy Configuration
+##### Validating Nginx Reverse Proxy Configuration
 
 **Symptom:** Browser couldn't reach the application through Nginx after new configuration file changes
 
