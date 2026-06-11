@@ -12,8 +12,11 @@ The application runs as a Flask/Gunicorn service inside Docker and is exposed th
 
 The environment is hosted on a local Linux VM and administered over SSH using key-based access. Supporting infrastructure includes UFW firewall rules, host-level file permission controls, Docker port mappings, Nginx configuration validation, and troubleshooting procedures for failures across the Linux host, container runtime, networking layer, and application service.
 
+### Deployment from a fresh clone
 ![Automated web app start up](./docs/assets/script.gif)
 
+
+### Application access Nginx
 ![Web Curl](./docs/assets/browser-get.gif)
 
 ### Tech Stack
